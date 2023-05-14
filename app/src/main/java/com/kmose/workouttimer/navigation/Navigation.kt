@@ -5,6 +5,10 @@ import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.kmose.workouttimer.navigation.destination.homeComposable
+import com.kmose.workouttimer.navigation.destination.listComposable
+import com.kmose.workouttimer.navigation.destination.timerComposable
+import com.kmose.workouttimer.util.Constants.HOME_SCREEN
 
 @Composable
 fun SetupNavigation(
@@ -16,12 +20,10 @@ fun SetupNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = "/"
+        startDestination = HOME_SCREEN
     ) {
-        composable(
-            route = "/"
-        ) {
-
-        }
+        homeComposable()
+        listComposable()
+        timerComposable()
     }
 }

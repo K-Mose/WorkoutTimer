@@ -8,7 +8,7 @@ import androidx.navigation.navArgument
 import com.kmose.workouttimer.util.Constants.TIMER_ID
 import com.kmose.workouttimer.util.Constants.TIMER_SCREEN
 
-fun NavGraphBuilder.TimerComposable() {
+fun NavGraphBuilder.timerComposable() {
     composable(
         route = TIMER_SCREEN,
         arguments = listOf(navArgument(TIMER_ID) {
