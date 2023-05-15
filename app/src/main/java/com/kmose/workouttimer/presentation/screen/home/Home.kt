@@ -1,8 +1,11 @@
 package com.kmose.workouttimer.presentation.screen.home
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.icu.text.UnicodeSet.SpanCondition
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -24,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
@@ -37,12 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import com.kmose.workouttimer.MainActivity
 import com.kmose.workouttimer.data.TimerType
 import com.kmose.workouttimer.ui.theme.Teal500
 import com.kmose.workouttimer.ui.theme.Teal700
 import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_SIZE
 import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_WIDTH
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -88,6 +94,7 @@ fun Home(  // Home에서 BottomSheet으로 바꾸기
                 }
             },
             content = {
+                OnBackPressed(modalSheetState, coroutineScope)
             },
         )
     }
@@ -248,6 +255,36 @@ fun Time(
                     Text(text = "Start")
                 }
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun OnBackPressed(
+    modalSheetState: ModalBottomSheetState,
+    coroutineScope: CoroutineScope
+) {
+    val context = LocalContext.current
+    val activity = LocalContext.current as Activity
+    var close by remember { mutableStateOf(false) }
+    // back button으로 모달 닫기
+    BackHandler(enabled = modalSheetState.isVisible) {
+        coroutineScope.launch { modalSheetState.hide() }
+    }
+    // onBackPressed
+    BackHandler(enabled = !modalSheetState.isVisible) {
+        if (close) {
+            activity.finish()
+        }
+        else {
+            close = true
+            Toast.makeText(context, "한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
+            coroutineScope.launch(Dispatchers.IO) {
+                Thread.sleep(2000)
+                Log.d("MYTAG", "CLOSE FALSE")
+                close = false
+            }
         }
     }
 }

@@ -21,30 +21,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-
-    var close = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             WorkoutTimerTheme {
                 val navController = rememberNavController()
                 SetupNavigation(navController = navController)
-            }
-        }
-    }
-
-    override fun onBackPressed() {
-        if (close) {
-            super.onBackPressed()
-            return
-        }
-        else {
-            close = true
-            Toast.makeText(this, "한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
-            lifecycleScope.launch(Dispatchers.IO) {
-                Thread.sleep(2000)
-                Log.d("MYTAG", "CLOSE FALSE")
-                close = false
             }
         }
     }
