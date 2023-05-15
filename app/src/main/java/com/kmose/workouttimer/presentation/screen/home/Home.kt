@@ -2,7 +2,6 @@ package com.kmose.workouttimer.presentation.screen.home
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.icu.text.UnicodeSet.SpanCondition
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -13,46 +12,35 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.HorizontalAlignmentLine
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
-import com.kmose.workouttimer.MainActivity
 import com.kmose.workouttimer.data.TimerType
 import com.kmose.workouttimer.ui.theme.Teal500
-import com.kmose.workouttimer.ui.theme.Teal700
 import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_SIZE
 import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_WIDTH
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
-import java.util.concurrent.TimeUnit
+import java.util.regex.Pattern
 
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -108,10 +96,10 @@ fun Time(
         type == timerType.value
     }
 
-    val time = remember { mutableStateOf("00") }
-    val hours = remember { mutableStateOf(TextFieldValue("")) }
-    val minutes = remember { mutableStateOf(TextFieldValue("")) }
-    val seconds = remember { mutableStateOf(TextFieldValue("")) }
+    val zero = "00"
+    val hours = remember { mutableStateOf(TextFieldValue(text = zero, selection = TextRange(zero.length)))}
+    val minutes = remember { mutableStateOf(TextFieldValue(text = zero, selection = TextRange(zero.length)))}
+    val seconds = remember { mutableStateOf(TextFieldValue(text = zero, selection = TextRange(zero.length)))}
     var isFocused1 by remember { mutableStateOf(false) }
     var isFocused2 by remember { mutableStateOf(false) }
     var isFocused3 by remember { mutableStateOf(false) }
@@ -180,12 +168,8 @@ fun Time(
                         .width(TIMER_NUMBER_WIDTH)
                         .onFocusChanged { focusState ->
 //                            isFocused1 = focusState.isFocused
-                            if (focusState.isFocused)
-                                hours.value = hours.value.apply {
-                                    copy(selection = TextRange(0, text.length))
-                                }
                         },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                     textStyle = TextStyle.Default.copy(
                         fontSize = TIMER_NUMBER_SIZE,
                         textAlign = TextAlign.Center
@@ -193,8 +177,8 @@ fun Time(
                     maxLines = 1,
                     value = hours.value,
                     onValueChange = {
-//                        Log.d("MYTAG::",timerValidation(it.text))
-                        hours.value = hours.value.copy(timerValidation(it.text))
+                        Log.d("MYTAG::",timerValidation(it.text))
+                        hours.value = TextFieldValue(text = timerValidation(it.text), selection = TextRange(2))
                     }
                 )
                 Text(text = ":", fontSize = TIMER_NUMBER_SIZE)
@@ -212,8 +196,11 @@ fun Time(
                     maxLines = 1,
                     value = minutes.value,
                     onValueChange = {
-                        Log.d("MYTAG::", timerValidation(it.text))
-                        minutes.value = TextFieldValue(timerValidation(it.text))
+//                        Log.d("MYTAG::", timerValidation(it))
+//                        minutes.value = timerValidation(it)
+                    },
+                    onTextLayout = { textLayoutResult ->
+                        textLayoutResult
                     }
                 )
                 Text(text = ":", fontSize = TIMER_NUMBER_SIZE)
@@ -231,8 +218,8 @@ fun Time(
                     maxLines = 1,
                     value = seconds.value,
                     onValueChange = {
-                        Log.d("MYTAG::", timerValidation(it.text))
-                        seconds.value = TextFieldValue(timerValidation(it.text))
+//                        Log.d("MYTAG::", timerValidation(it))
+//                        seconds.value = timerValidation(it)
                     }
                 )
             }
@@ -291,18 +278,22 @@ fun OnBackPressed(
 
 fun timerValidation(time: String): String =
     time.let {
-        if (it.length > 2) {
-            it.substring(1, 3).let { it2 ->
-                if (it2.substring(0, 1).toInt() > 5)
-                    "0$it2"
-                else
+        val pattern = Pattern.compile("\\D")
+        val s = it.replace(pattern.toRegex(), "0")
+        if (s.isEmpty()) "00"
+        else if (s.length > 2) {
+            s.substring(1, 3).let { it2 ->
+                if (it2.toInt() < 60)
                     it2
+                else {
+                    "0${it2.last()}"
+                }
             }
         } else {
-            if (it.substring(0, 1).toInt() > 5)
-                "0$it"
+            if (s.substring(0, 1).toInt() > 5)
+                "0$s"
             else
-                it
+                s
         }
     }
 
