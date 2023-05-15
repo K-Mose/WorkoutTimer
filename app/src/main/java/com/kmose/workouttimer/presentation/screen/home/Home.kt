@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -19,7 +20,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -35,12 +35,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kmose.workouttimer.data.TimerType
 import com.kmose.workouttimer.ui.theme.Teal500
+import com.kmose.workouttimer.util.Utils.timerValidation
+import com.kmose.workouttimer.util.Utils.toNumberString
+import com.kmose.workouttimer.util.dimens.CONTENT_PADDING_MEDIUM
+import com.kmose.workouttimer.util.dimens.CONTENT_PADDING_XLARGE
+import com.kmose.workouttimer.util.dimens.CORNER_RADIOUS_MEDIUM
 import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_SIZE
 import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_WIDTH
+import com.kmose.workouttimer.util.dimens.TIMER_NUMBER_WIDTH_MEDIUM
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.regex.Pattern
 
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
@@ -56,35 +61,55 @@ fun Home(  // Home에서 BottomSheet으로 바꾸기
         confirmStateChange = { it != ModalBottomSheetValue.HalfExpanded }, // false 시 드래그나 외부 터치로 닫기 안됨
         skipHalfExpanded = true
     )
+
+    var isOverlay by remember { mutableStateOf(false) }
+
     ModalBottomSheetLayout(
         sheetState = modalSheetState,
-        sheetShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+        sheetShape = RoundedCornerShape(
+            topStart = CORNER_RADIOUS_MEDIUM,
+            topEnd = CORNER_RADIOUS_MEDIUM
+        ),
         sheetContent = {
             Time(timerType = timerType)
         }
     ) {
-        Scaffold(
-            floatingActionButton = {
-                IconButton(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .border(width = 2.dp, color = Teal500, shape = CircleShape),
-                    onClick = {
-                        coroutineScope.launch {
-                            if (modalSheetState.isVisible)
-                                modalSheetState.hide()
-                            else
-                                modalSheetState.animateTo(ModalBottomSheetValue.Expanded)
+        Box {
+            Scaffold(
+                floatingActionButton = {
+                    IconButton(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .border(width = 2.dp, color = Teal500, shape = CircleShape),
+                        onClick = {
+                            coroutineScope.launch {
+                                if (modalSheetState.isVisible)
+                                    modalSheetState.hide()
+                                else
+                                    modalSheetState.animateTo(ModalBottomSheetValue.Expanded)
+                            }
+                        },
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "timer list")
+                    }
+                },
+                content = {
+                    OnBackPressed(modalSheetState, coroutineScope)
+                },
+            )
+
+            // 기존 framelayout 역할
+            if (isOverlay)
+                Surface(
+                    color = Color.Black.copy(alpha = 0.8f),
+                    modifier = Modifier.fillMaxSize()
+                        .clickable {
+                            isOverlay = false
                         }
-                    },
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "timer list")
+
                 }
-            },
-            content = {
-                OnBackPressed(modalSheetState, coroutineScope)
-            },
-        )
+        }
     }
 }
 
@@ -100,28 +125,13 @@ fun Time(
     val hours = remember { mutableStateOf(TextFieldValue(text = zero, selection = TextRange(zero.length)))}
     val minutes = remember { mutableStateOf(TextFieldValue(text = zero, selection = TextRange(zero.length)))}
     val seconds = remember { mutableStateOf(TextFieldValue(text = zero, selection = TextRange(zero.length)))}
-    var isFocused1 by remember { mutableStateOf(false) }
-    var isFocused2 by remember { mutableStateOf(false) }
-    var isFocused3 by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
+    var preTime = remember { mutableStateOf(TextFieldValue(text = zero.toNumberString(1), selection = TextRange(zero.length)))}
 
-    LaunchedEffect(key1 = isFocused1, key2 = isFocused2, key3 = isFocused3) {
-        if (isFocused1 || isFocused2 || isFocused3) {/*
-            hours.value = hours.value.apply {
-                copy(selection = TextRange(0, text.length))
-            }
-            minutes.value = minutes.value.apply {
-                copy(selection = TextRange(0, text.length))
-            }
-            seconds.value = seconds.value.apply {
-                copy(selection = TextRange(0, text.length))
-            }*/
-        }
-    }
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             // Clear TextField Focus
             .pointerInput(Unit) {
                 detectTapGestures {
@@ -133,7 +143,7 @@ fun Time(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(8f)
+//                .weight(8f)
         ) {
             Row(
                 modifier = Modifier
@@ -165,11 +175,11 @@ fun Time(
             ) {
                 BasicTextField(
                     modifier = Modifier
-                        .width(TIMER_NUMBER_WIDTH)
-                        .onFocusChanged { focusState ->
-//                            isFocused1 = focusState.isFocused
-                        },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        .width(TIMER_NUMBER_WIDTH),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
                     textStyle = TextStyle.Default.copy(
                         fontSize = TIMER_NUMBER_SIZE,
                         textAlign = TextAlign.Center
@@ -178,16 +188,16 @@ fun Time(
                     value = hours.value,
                     onValueChange = {
                         Log.d("MYTAG::",timerValidation(it.text))
-                        hours.value = TextFieldValue(text = timerValidation(it.text), selection = TextRange(2))
+                        hours.value = TextFieldValue(
+                            text = timerValidation(it.text),
+                            selection = TextRange(2)
+                        )
                     }
                 )
                 Text(text = ":", fontSize = TIMER_NUMBER_SIZE)
                 BasicTextField(
                     modifier = Modifier
-                        .width(TIMER_NUMBER_WIDTH)
-                        .onFocusChanged { focusState ->
-                            isFocused2 = focusState.isFocused
-                        },
+                        .width(TIMER_NUMBER_WIDTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     textStyle = TextStyle.Default.copy(
                         fontSize = TIMER_NUMBER_SIZE,
@@ -196,8 +206,10 @@ fun Time(
                     maxLines = 1,
                     value = minutes.value,
                     onValueChange = {
-//                        Log.d("MYTAG::", timerValidation(it))
-//                        minutes.value = timerValidation(it)
+                        minutes.value = TextFieldValue(
+                            text = timerValidation(it.text),
+                            selection = TextRange(2)
+                        )
                     },
                     onTextLayout = { textLayoutResult ->
                         textLayoutResult
@@ -206,10 +218,7 @@ fun Time(
                 Text(text = ":", fontSize = TIMER_NUMBER_SIZE)
                 BasicTextField(
                     modifier = Modifier
-                        .width(TIMER_NUMBER_WIDTH)
-                        .onFocusChanged { focusState ->
-                            isFocused3 = focusState.isFocused
-                        },
+                        .width(TIMER_NUMBER_WIDTH),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     textStyle = TextStyle.Default.copy(
                         fontSize = TIMER_NUMBER_SIZE,
@@ -218,9 +227,52 @@ fun Time(
                     maxLines = 1,
                     value = seconds.value,
                     onValueChange = {
-//                        Log.d("MYTAG::", timerValidation(it))
-//                        seconds.value = timerValidation(it)
+                        seconds.value = TextFieldValue(
+                            text = timerValidation(it.text),
+                            selection = TextRange(2)
+                        )
                     }
+                )
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    vertical = CONTENT_PADDING_MEDIUM, horizontal = CONTENT_PADDING_XLARGE
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Text("Pre-Time :")
+            BasicTextField(
+                modifier = Modifier
+                    .padding(start = CONTENT_PADDING_MEDIUM)
+                    .width(TIMER_NUMBER_WIDTH_MEDIUM),
+                textStyle = MaterialTheme.typography.h5.copy(textAlign = TextAlign.Right),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
+                singleLine = true,
+                value = preTime.value,
+                onValueChange = {
+                    preTime.value = TextFieldValue(
+                        text = it.text.toNumberString(2),
+                        selection = TextRange(it.text.length+1)
+                    )
+                },
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+            ) {
+                Text(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart),
+                    text = "sec",
+                    style = MaterialTheme.typography.caption
                 )
             }
         }
@@ -232,14 +284,14 @@ fun Time(
         )
         Box(
             modifier = Modifier
-                .weight(1f)
+//                .weight(1f)
                 .fillMaxWidth()
         ) {
             Button(
                 modifier = Modifier.align(Alignment.Center),
                 onClick = {},
                 content = {
-                    Text(text = "Start")
+                    Text(text = "SAVE")
                 }
             )
         }
@@ -275,27 +327,6 @@ fun OnBackPressed(
         }
     }
 }
-
-fun timerValidation(time: String): String =
-    time.let {
-        val pattern = Pattern.compile("\\D")
-        val s = it.replace(pattern.toRegex(), "0")
-        if (s.isEmpty()) "00"
-        else if (s.length > 2) {
-            s.substring(1, 3).let { it2 ->
-                if (it2.toInt() < 60)
-                    it2
-                else {
-                    "0${it2.last()}"
-                }
-            }
-        } else {
-            if (s.substring(0, 1).toInt() > 5)
-                "0$s"
-            else
-                s
-        }
-    }
 
 @Preview(showBackground = true)
 @Composable
